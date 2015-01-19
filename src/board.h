@@ -16,11 +16,8 @@
 #define STM32F405xx
 
 
-#define UART_CONN1 SD1
-#define UART_CONN2 SD4
-#define UART_CONN3 SD2
-#define UART_CONN4 SD6
-
+#define UART_CONN1  SD5
+#define UART_EXT    SD1
 /*
  * IO pins assignments.
  */
@@ -537,7 +534,13 @@ extern "C" {
 
 #define boardInit() board_init()
 
+void reboot_and_run_bootloader(void);
+void check_bootloader(void);
+
+
 void board_init(void);
+void enable_charging(void);
+void disable_charging(void);
 
 #define ERROR_LEVEL_NORMAL         0
 #define ERROR_LEVEL_WARNING        1
