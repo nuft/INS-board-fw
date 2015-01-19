@@ -32,23 +32,23 @@ static THD_FUNCTION(led_task, arg)
     while (1) {
         int err = error_level_get();
         if (err == ERROR_LEVEL_WARNING) {
-            palSetPad(GPIOA, GPIOA_LED_ERROR);
+            palClearPad(GPIOC, GPIOC_LED_STATUS);
             chThdSleepMilliseconds(500);
-            palClearPad(GPIOA, GPIOA_LED_ERROR);
+            palSetPad(GPIOC, GPIOC_LED_STATUS);
             chThdSleepMilliseconds(500);
         } else if (err == ERROR_LEVEL_CRITICAL) {
-            palSetPad(GPIOA, GPIOA_LED_ERROR);
+            palClearPad(GPIOC, GPIOC_LED_STATUS);
             chThdSleepMilliseconds(50);
-            palClearPad(GPIOA, GPIOA_LED_ERROR);
+            palSetPad(GPIOC, GPIOC_LED_STATUS);
             chThdSleepMilliseconds(50);
         } else {
-            palSetPad(GPIOA, GPIOA_LED_HEARTBEAT);
+            palClearPad(GPIOC, GPIOC_LED_STATUS);
             chThdSleepMilliseconds(80);
-            palClearPad(GPIOA, GPIOA_LED_HEARTBEAT);
+            palSetPad(GPIOC, GPIOC_LED_STATUS);
             chThdSleepMilliseconds(80);
-            palSetPad(GPIOA, GPIOA_LED_HEARTBEAT);
+            palClearPad(GPIOC, GPIOC_LED_STATUS);
             chThdSleepMilliseconds(80);
-            palClearPad(GPIOA, GPIOA_LED_HEARTBEAT);
+            palSetPad(GPIOC, GPIOC_LED_STATUS);
             if (safemode_active()) {
                 chThdSleepMilliseconds(80);
             } else {
@@ -112,79 +112,42 @@ static void cmd_gyro(BaseSequentialStream *chp, int argc, char *argv[])
     }
 }
 
-static const I2CConfig i2c_cfg = {
-    .op_mode = OPMODE_I2C,
-    .clock_speed = 400000,
-    .duty_cycle = FAST_DUTY_CYCLE_2
-};
-
-static void cmd_barometer(BaseSequentialStream *chp, int argc, char *argv[])
+static void cmd_baro(BaseSequentialStream *chp, int argc, char *argv[])
 {
-    (void) argc;
-    (void) argv;
-    ms5611_t barometer;
-
-    I2CDriver *driver = &I2CD1;
-
-    i2cStart(driver, &i2c_cfg);
-    i2cAcquireBus(driver);
-
-    chprintf(chp, "ms5611 init\r\n");
-
-    int init = ms5611_i2c_init(&barometer, driver, 0);
-
-    if (init != 0) {
-        i2cflags_t flags = i2cGetErrors(driver);
-        chprintf(chp, "ms5611 init failed: %d, %u\r\n", init, (uint32_t)flags);
-        i2cReleaseBus(driver);
-        i2cStop(driver);
-        return;
-    } else {
-        chprintf(chp, "ms5611 init succeeded\r\n");
+    (void)argc;
+    (void)argv;
+    int i;
+    for (i = 0; i < 100; i++) {
+        int32_t t;
+        uint32_t p;
+        chSysLock();
+        t = barometer_temperature;
+        p = barometer_pressure;
+        chSysUnlock();
+        chprintf(chp, "baro p: %d t:%d\n", p, t);
+        chThdSleepMilliseconds(10);
     }
+}
 
+
+static void cmd_dfu(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    (void)argc;
+    (void)argv;
+
+    chprintf(chp, "rebooting in 3 seconds...\n");
+    chThdSleepMilliseconds(3000);
+    usbDisconnectBus(serusbcfg.usbp);
     chThdSleepMilliseconds(100);
-
-    int i = 50;
-    while (i-- > 0) {
-        uint32_t raw_t, raw_p, press;
-        int32_t temp;
-        int16_t t;
-
-        t = ms5611_adc_start(&barometer, MS5611_ADC_TEMP, MS5611_OSR_4096);
-        if (t < 0) {
-            continue;
-        }
-
-        chThdSleepMilliseconds((t - 1)/1000 + 1);
-
-        ms5611_adc_read(&barometer, &raw_t);
-
-        t = ms5611_adc_start(&barometer, MS5611_ADC_PRESS, MS5611_OSR_4096);
-        if (t < 0) {
-            continue;
-        }
-
-        chThdSleepMilliseconds((t - 1)/1000 + 1);
-
-        ms5611_adc_read(&barometer, &raw_p);
-
-        press = ms5611_calc_press(&barometer, raw_p, raw_t, &temp);
-
-        chprintf(chp, "pressure: %u, temperature: %u\r\n", press, temp);
-
-        chThdSleepMilliseconds(100);
-    }
-
-    i2cReleaseBus(driver);
-    i2cStop(driver);
+    reboot_and_run_bootloader();
 }
 
 static const ShellCommand commands[] = {
   {"mem", cmd_mem},
   {"threads", cmd_threads},
   {"gyro", cmd_gyro},
-  {"baro", cmd_barometer},
+  {"baro", cmd_baro},
+  {"dfu", cmd_dfu},
   {NULL, NULL}
 };
 
@@ -256,30 +219,36 @@ void stream_imu_values(BaseSequentialStream *out)
     }
 }
 
-
-
 int main(void)
 {
+    // check_bootloader();
+
     halInit();
     chSysInit();
 
     chThdCreateStatic(led_task_wa, sizeof(led_task_wa), LOWPRIO, led_task, NULL);
 
+    enable_charging();
+
+    // debug UART
+    sdStart(&UART_CONN1, NULL);
+    chprintf((BaseSequentialStream*)&UART_CONN1, "\n> start\n");
+
+    // sensors
+    onboard_sensors_start();
+
+    // USB CDC
     sduObjectInit(&SDU1);
     sduStart(&SDU1, &serusbcfg);
-
     usbDisconnectBus(serusbcfg.usbp);
     chThdSleepMilliseconds(1000);
     usbStart(serusbcfg.usbp, &usbcfg);
     usbConnectBus(serusbcfg.usbp);
 
-    onboard_sensors_start();
-
-    sdStart(&UART_CONN1, NULL);
     // while (SDU1.config->usbp->state != USB_ACTIVE) {
     //     chThdSleepMilliseconds(10);
     // }
-    stream_imu_values((BaseSequentialStream*)&UART_CONN1);
+    // stream_imu_values((BaseSequentialStream*)&UART_CONN1);
 
     shellInit();
     thread_t *shelltp = NULL;
@@ -295,11 +264,5 @@ int main(void)
             }
         }
         chThdSleepMilliseconds(500);
-
-        if (palReadPad(GPIOC, GPIOC_SDCARD_DETECT)) {
-            palClearPad(GPIOB, GPIOB_LED_SDCARD);
-        } else {
-            palSetPad(GPIOB, GPIOB_LED_SDCARD);
-        }
     }
 }
