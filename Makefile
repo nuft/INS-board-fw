@@ -80,7 +80,7 @@ endif
 PROJECT = nanocopter
 
 # Imported source files and paths
-CHIBIOS = ChibiOS-RT
+CHIBIOS = ChibiOS
 include $(CHIBIOS)/os/hal/hal.mk
 include $(CHIBIOS)/os/hal/ports/STM32/STM32F4xx/platform.mk
 include $(CHIBIOS)/os/hal/osal/rt/osal.mk
