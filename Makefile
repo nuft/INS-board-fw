@@ -4,44 +4,28 @@
 #
 
 # Compiler options here.
-ifeq ($(USE_OPT),)
-  USE_OPT = -Os -ggdb -fomit-frame-pointer -falign-functions=16
-endif
+USE_OPT = -Os -ggdb -fomit-frame-pointer -falign-functions=16
 
 # C specific options here (added to USE_OPT).
-ifeq ($(USE_COPT),)
-  USE_COPT = 
-endif
+USE_COPT = 
 
 # C++ specific options here (added to USE_OPT).
-ifeq ($(USE_CPPOPT),)
-  USE_CPPOPT = -fno-rtti
-endif
+USE_CPPOPT = -fno-rtti
 
 # Enable this if you want the linker to remove unused code and data
-ifeq ($(USE_LINK_GC),)
-  USE_LINK_GC = yes
-endif
+USE_LINK_GC = yes
 
 # Linker extra options here.
-ifeq ($(USE_LDOPT),)
-  USE_LDOPT = 
-endif
+USE_LDOPT = 
 
 # Enable this if you want link time optimizations (LTO)
-ifeq ($(USE_LTO),)
-  USE_LTO = no
-endif
+USE_LTO = no
 
 # If enabled, this option allows to compile the application in THUMB mode.
-ifeq ($(USE_THUMB),)
-  USE_THUMB = yes
-endif
+USE_THUMB = yes
 
 # Enable this if you want to see the full log while compiling.
-ifeq ($(USE_VERBOSE_COMPILE),)
-  USE_VERBOSE_COMPILE = no
-endif
+USE_VERBOSE_COMPILE = no
 
 #
 # Build global options
@@ -53,20 +37,14 @@ endif
 
 # Stack size to be allocated to the Cortex-M process stack. This stack is
 # the stack used by the main() thread.
-ifeq ($(USE_PROCESS_STACKSIZE),)
-  USE_PROCESS_STACKSIZE = 0x400
-endif
+USE_PROCESS_STACKSIZE = 0x400
 
 # Stack size to the allocated to the Cortex-M main/exceptions stack. This
 # stack is used for processing interrupts and exceptions.
-ifeq ($(USE_EXCEPTIONS_STACKSIZE),)
-  USE_EXCEPTIONS_STACKSIZE = 0x400
-endif
+USE_EXCEPTIONS_STACKSIZE = 0x400
 
 # Enables the use of FPU on Cortex-M4 (no, softfp, hard).
-ifeq ($(USE_FPU),)
-  USE_FPU = hard
-endif
+USE_FPU = hard
 
 #
 # Architecture or project specific options
@@ -101,7 +79,7 @@ CSRC = $(PORTSRC) \
        $(OSALSRC) \
        $(PLATFORMSRC) \
        $(BOARDSRC) \
-       $(CHIBIOS)/os/various/chprintf.c \
+       $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
        $(CHIBIOS)/os/various/shell.c \
        $(PROJSRC)
 
@@ -134,7 +112,7 @@ ASMSRC = $(PORTASM)
 
 INCDIR = $(PORTINC) $(KERNINC) $(TESTINC) \
          $(HALINC) $(OSALINC) $(PLATFORMINC) $(BOARDINC) \
-         $(CHIBIOS)/os/various
+         $(CHIBIOS)/os/various $(CHIBIOS)/os/hal/lib/streams
 
 #
 # Project, sources and paths
@@ -155,7 +133,7 @@ CPPC = $(TRGT)g++
 #       runtime support makes code size explode.
 LD   = $(TRGT)gcc
 #LD   = $(TRGT)g++
-CP   = $(TRGT)objcopy
+CP   = $(TRGT)objcopy -j startup -j constructors -j destructors -j .text -j .ARM.extab -j .ARM.exidx -j .eh_frame_hdr -j .eh_frame -j .textalign -j .data
 AS   = $(TRGT)gcc -x assembler-with-cpp
 AR   = $(TRGT)ar
 OD   = $(TRGT)objdump
