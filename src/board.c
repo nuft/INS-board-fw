@@ -76,12 +76,12 @@ void board_init(void) {
 
 }
 
-void enable_charging(void)
+void charging_enable(void)
 {
     palSetPad(GPIOA, GPIOA_BAT_NTC);
 }
 
-void disable_charging(void)
+void charging_disable(void)
 {
     palClearPad(GPIOA, GPIOA_BAT_NTC);
 }
@@ -92,14 +92,7 @@ void panic_handler(const char *reason)
 
     palClearPad(GPIOC, GPIOC_LED_STATUS);
 
-    // safety
-    disable_charging();
-
-    static volatile uint32_t ipsr;
-    static volatile const char *msg;
-    msg = reason;
-    ipsr = __get_IPSR();
-
+    charging_disable(); // safety
 
 #ifdef DEBUG
     while (1);
