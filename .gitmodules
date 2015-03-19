@@ -9,4 +9,4 @@
 	url = git@github.com:Stapelzeiger/serial-datagram.git
 [submodule "ChibiOS"]
 	path = ChibiOS
-	url = ./ChibiOS
+	url = https://github.com/nuft/ChibiOS.git
