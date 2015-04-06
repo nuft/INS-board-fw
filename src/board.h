@@ -99,7 +99,24 @@
 #define PIN_PUPDR_PULLDOWN(n)       (2U << ((n) * 2))
 #define PIN_AFIO_AF(n, v)           ((v##U) << ((n % 8) * 4))
 
-// GPIO A
+/*
+GPIOA_PB_CTRL_INT   (input floating)
+GPIOA_BAT_NTC       (output low)
+GPIOA_CHG_STATUS    (input floating)
+GPIOA_CHG_ISET      (output high)
+GPIOA_NC_4          (input pulldown)
+GPIOA_NC_5          (input pulldown)
+GPIOA_NC_6          (input pulldown)
+GPIOA_NC_7          (input pulldown)
+GPIOA_MCO1_CLK      (alternate 0)
+GPIOA_USB_VBUS      (input floating)
+GPIOA_USB_ID        (input floating)
+GPIOA_USB_DM        (alternate 10)
+GPIOA_USB_DP        (alternate 10)
+GPIOA_JTAG_TMS      (alternate 0)
+GPIOA_JTAG_TCK      (alternate 0)
+GPIOA_JTAG_TDI      (alternate 0)
+*/
 #define VAL_GPIOA_MODER     ( PIN_MODE_INPUT( GPIOA_PB_CTRL_INT ) \
                             | PIN_MODE_OUTPUT( GPIOA_BAT_NTC ) \
                             | PIN_MODE_INPUT( GPIOA_CHG_STATUS ) \
@@ -153,7 +170,7 @@
 
 #define VAL_GPIOA_PUPDR     ( PIN_PUPDR_FLOATING( GPIOA_PB_CTRL_INT ) \
                             | PIN_PUPDR_FLOATING( GPIOA_BAT_NTC ) \
-                            | PIN_PUPDR_PULLUP( GPIOA_CHG_STATUS ) \
+                            | PIN_PUPDR_FLOATING( GPIOA_CHG_STATUS ) \
                             | PIN_PUPDR_FLOATING( GPIOA_CHG_ISET ) \
                             | PIN_PUPDR_PULLDOWN( GPIOA_NC_4 ) \
                             | PIN_PUPDR_PULLDOWN( GPIOA_NC_5 ) \
@@ -203,19 +220,36 @@
                             | PIN_AFIO_AF( GPIOA_JTAG_TCK , 0 ) \
                             | PIN_AFIO_AF( GPIOA_JTAG_TDI , 0 ) )
 
-// GPIO B
+/*
+GPIOB_NC_0              (input pulldown)
+GPIOB_NC_1              (input pulldown)
+GPIOB_NC_2              (input pulldown)
+GPIOB_JTAG_TDO          (alternate 0)
+GPIOB_JTAG_TRST         (alternate 0)
+GPIOB_NC_5              (input pulldown)
+GPIOB_UART1_TX_EXP      (alternate 7)
+GPIOB_UART1_RX_EXP      (alternate 7)
+GPIOB_MOTOR5            (alternate 2)
+GPIOB_MOTOR6            (alternate 2)
+GPIOB_I2C2_SCL          (alternate 4)
+GPIOB_I2C2_SDA          (alternate 4)
+GPIOB_NRF_CSN           (output high)
+GPIOB_NRF_SCK           (alternate 5)
+GPIOB_NC_14             (input pulldown)
+GPIOB_PB_CTRL_KILL      (output high)
+*/
 #define VAL_GPIOB_MODER     ( PIN_MODE_INPUT( GPIOB_NC_0 ) \
                             | PIN_MODE_INPUT( GPIOB_NC_1 ) \
                             | PIN_MODE_INPUT( GPIOB_NC_2 ) \
                             | PIN_MODE_ALTERNATE( GPIOB_JTAG_TDO ) \
                             | PIN_MODE_ALTERNATE( GPIOB_JTAG_TRST ) \
                             | PIN_MODE_INPUT( GPIOB_NC_5 ) \
-                            | PIN_MODE_INPUT( GPIOB_UART1_TX_EXP ) \
-                            | PIN_MODE_INPUT( GPIOB_UART1_RX_EXP ) \
+                            | PIN_MODE_ALTERNATE( GPIOB_UART1_TX_EXP ) \
+                            | PIN_MODE_ALTERNATE( GPIOB_UART1_RX_EXP ) \
                             | PIN_MODE_ALTERNATE( GPIOB_MOTOR5 ) \
                             | PIN_MODE_ALTERNATE( GPIOB_MOTOR6 ) \
-                            | PIN_MODE_INPUT( GPIOB_I2C2_SCL ) \
-                            | PIN_MODE_INPUT( GPIOB_I2C2_SDA ) \
+                            | PIN_MODE_ALTERNATE( GPIOB_I2C2_SCL ) \
+                            | PIN_MODE_ALTERNATE( GPIOB_I2C2_SDA ) \
                             | PIN_MODE_OUTPUT( GPIOB_NRF_CSN ) \
                             | PIN_MODE_ALTERNATE( GPIOB_NRF_SCK ) \
                             | PIN_MODE_INPUT( GPIOB_NC_14 ) \
@@ -262,7 +296,7 @@
                             | PIN_PUPDR_PULLUP( GPIOB_JTAG_TRST ) \
                             | PIN_PUPDR_PULLDOWN( GPIOB_NC_5 ) \
                             | PIN_PUPDR_FLOATING( GPIOB_UART1_TX_EXP ) \
-                            | PIN_PUPDR_FLOATING( GPIOB_UART1_RX_EXP ) \
+                            | PIN_PUPDR_PULLUP( GPIOB_UART1_RX_EXP ) \
                             | PIN_PUPDR_FLOATING( GPIOB_MOTOR5 ) \
                             | PIN_PUPDR_FLOATING( GPIOB_MOTOR6 ) \
                             | PIN_PUPDR_FLOATING( GPIOB_I2C2_SCL ) \
@@ -307,7 +341,24 @@
                             | PIN_AFIO_AF( GPIOB_NC_14 , 0 ) \
                             | PIN_AFIO_AF( GPIOB_PB_CTRL_KILL , 0) )
 
-// GPIO C
+/*
+GPIOC_NRF_CE            (output low)
+GPIOC_NRF_IRQ           (input floating)
+GPIOC_NRF_MISO          (alternate 5)
+GPIOC_NRF_MOSI          (alternate 5)
+GPIOC_NC_4              (input pulldown)
+GPIOC_LED_STATUS        (output high)
+GPIOC_MOTOR1            (alternate 2)
+GPIOC_MOTOR2            (alternate 2)
+GPIOC_MOTOR3            (alternate 2)
+GPIOC_MOTOR4            (alternate 2)
+GPIOC_MPU6050_INT       (input floating)
+GPIOC_MPU6050_FSYNC     (input floating)
+GPIOC_UART5_TX_CONN     (alternate 8)
+GPIOC_HMC5883L_DRDY     (input floating)
+GPIOC_NC_14             (input pulldown)
+GPIOC_NC_15             (input pulldown)
+*/
 #define VAL_GPIOC_MODER     ( PIN_MODE_OUTPUT( GPIOC_NRF_CE ) \
                             | PIN_MODE_INPUT( GPIOC_NRF_IRQ ) \
                             | PIN_MODE_ALTERNATE( GPIOC_NRF_MISO ) \
@@ -320,7 +371,7 @@
                             | PIN_MODE_ALTERNATE( GPIOC_MOTOR4 ) \
                             | PIN_MODE_INPUT( GPIOC_MPU6050_INT ) \
                             | PIN_MODE_INPUT( GPIOC_MPU6050_FSYNC ) \
-                            | PIN_MODE_INPUT( GPIOC_UART5_TX_CONN ) \
+                            | PIN_MODE_ALTERNATE( GPIOC_UART5_TX_CONN ) \
                             | PIN_MODE_INPUT( GPIOC_HMC5883L_DRDY ) \
                             | PIN_MODE_INPUT( GPIOC_NC_14 ) \
                             | PIN_MODE_INPUT( GPIOC_NC_15 ) )
@@ -360,7 +411,7 @@
                             | PIN_OSPEED_100M( GPIOC_NC_15 ) )
 
 #define VAL_GPIOC_PUPDR     ( PIN_PUPDR_FLOATING( GPIOC_NRF_CE ) \
-                            | PIN_PUPDR_PULLUP( GPIOC_NRF_IRQ ) \
+                            | PIN_PUPDR_FLOATING( GPIOC_NRF_IRQ ) \
                             | PIN_PUPDR_PULLDOWN( GPIOC_NRF_MISO ) \
                             | PIN_PUPDR_FLOATING( GPIOC_NRF_MOSI ) \
                             | PIN_PUPDR_PULLDOWN( GPIOC_NC_4 ) \
@@ -369,7 +420,7 @@
                             | PIN_PUPDR_FLOATING( GPIOC_MOTOR2 ) \
                             | PIN_PUPDR_FLOATING( GPIOC_MOTOR3 ) \
                             | PIN_PUPDR_FLOATING( GPIOC_MOTOR4 ) \
-                            | PIN_PUPDR_PULLDOWN( GPIOC_MPU6050_INT ) \
+                            | PIN_PUPDR_FLOATING( GPIOC_MPU6050_INT ) \
                             | PIN_PUPDR_FLOATING( GPIOC_MPU6050_FSYNC ) \
                             | PIN_PUPDR_FLOATING( GPIOC_UART5_TX_CONN ) \
                             | PIN_PUPDR_FLOATING( GPIOC_HMC5883L_DRDY ) \
@@ -411,11 +462,13 @@
                             | PIN_AFIO_AF( GPIOC_NC_14 , 0 ) \
                             | PIN_AFIO_AF( GPIOC_NC_15 , 0 ) )
 
-// GPIO D
-#define VAL_GPIOD_MODER     ( PIN_MODE_INPUT( GPIOD_UART5_RX_CONN ) )
+/*
+GPIOD_UART5_RX_CONN     (alternate 8)
+*/
+#define VAL_GPIOD_MODER     ( PIN_MODE_ALTERNATE( GPIOD_UART5_RX_CONN ) )
 #define VAL_GPIOD_OTYPER    ( PIN_OTYPE_PUSHPULL( GPIOD_UART5_RX_CONN ) )
 #define VAL_GPIOD_OSPEEDR   ( PIN_OSPEED_100M( GPIOD_UART5_RX_CONN ) )
-#define VAL_GPIOD_PUPDR     ( PIN_PUPDR_FLOATING( GPIOD_UART5_RX_CONN ) )
+#define VAL_GPIOD_PUPDR     ( PIN_PUPDR_PULLUP( GPIOD_UART5_RX_CONN ) )
 #define VAL_GPIOD_ODR       ( PIN_ODR_LOW( GPIOD_UART5_RX_CONN ) )
 #define VAL_GPIOD_AFRL      ( PIN_AFIO_AF( GPIOD_UART5_RX_CONN, 8) )
 #define VAL_GPIOD_AFRH      ( 0 )
@@ -447,7 +500,10 @@
 #define VAL_GPIOG_AFRL      (0)
 #define VAL_GPIOG_AFRH      (0)
 
-// GPIO H
+/*
+GPIOH_OSC_IN    (input floating) // OSC function has priority anyway
+GPIOH_OSC_OUT   (input floating)
+*/
 #define VAL_GPIOH_MODER     ( PIN_MODE_INPUT( GPIOH_OSC_IN ) \
                             | PIN_MODE_INPUT( GPIOH_OSC_OUT ) )
 #define VAL_GPIOH_OTYPER    ( PIN_OTYPE_PUSHPULL( GPIOH_OSC_IN ) \
