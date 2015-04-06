@@ -10,3 +10,6 @@
 [submodule "ChibiOS"]
 	path = ChibiOS
 	url = https://github.com/nuft/ChibiOS.git
+[submodule "src/sensors"]
+	path = src/sensors
+	url = https://github.com/nuft/sensor-drivers.git
