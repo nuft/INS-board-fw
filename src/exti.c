@@ -14,12 +14,17 @@ static void gpio_exti_callback(EXTDriver *extp, expchannel_t channel) {
         chSysLockFromISR();
         chEvtBroadcastFlagsI(&exti_events, EXTI_EVENT_MPU6050_INT);
         chSysUnlockFromISR();
+    } else if (channel == GPIOC_NRF_IRQ) {
+        chSysLockFromISR();
+        chEvtBroadcastFlagsI(&exti_events, EXTI_EVENT_NRF_IRQ);
+        chSysUnlockFromISR();
     }
 }
 
 static const EXTConfig extcfg = {{
     {EXT_CH_MODE_DISABLED, NULL}, // 0
-    {EXT_CH_MODE_DISABLED, NULL}, // 1
+    // GPIOC_NRF_IRQ PC1
+    {EXT_CH_MODE_FALLING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOC, gpio_exti_callback},
     {EXT_CH_MODE_DISABLED, NULL}, // 2
     {EXT_CH_MODE_DISABLED, NULL}, // 3
     {EXT_CH_MODE_DISABLED, NULL}, // 4
@@ -28,7 +33,7 @@ static const EXTConfig extcfg = {{
     {EXT_CH_MODE_DISABLED, NULL}, // 7
     {EXT_CH_MODE_DISABLED, NULL}, // 8
     {EXT_CH_MODE_DISABLED, NULL}, // 9
-    // GPIOC_MPU6050_INT, C10
+    // GPIOC_MPU6050_INT, PC10
     {EXT_CH_MODE_RISING_EDGE | EXT_CH_MODE_AUTOSTART | EXT_MODE_GPIOC, gpio_exti_callback},
     {EXT_CH_MODE_DISABLED, NULL}, // 11
     {EXT_CH_MODE_DISABLED, NULL}, // 12
