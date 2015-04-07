@@ -13,3 +13,6 @@
 [submodule "src/sensors"]
 	path = src/sensors
 	url = https://github.com/nuft/sensor-drivers.git
+[submodule "src/timestamp"]
+	path = src/timestamp
+	url = https://github.com/nuft/timestamp.git
