@@ -1,6 +1,6 @@
 .PHONY: flash
 flash: all
-	openocd -f oocd.cfg -c "program build/$(PROJECT).elf verify reset"
+	openocd -f oocd.cfg -c "program build/$(PROJECT).elf verify reset" -c "shutdown"
 
 .PHONY: r
 r: reset
