@@ -3,10 +3,12 @@
 #include <chprintf.h>
 #include <string.h>
 #include "usbcfg.h"
-#include "sensors/onboardsensors.h"
+#include "onboardsensors.h"
 #include "serial-datagram/serial_datagram.h"
 #include "cmp/cmp.h"
+#include "exti.h"
 #include "shell_commands.h"
+#include "radio.h"
 
 SerialUSBDriver SDU1;
 
@@ -55,68 +57,6 @@ static THD_FUNCTION(led_task, arg)
     return 0;
 }
 
-static void _stream_imu_values_sndfn(void *arg, const void *p, size_t len)
-{
-    if (len > 0) {
-        chSequentialStreamWrite((BaseSequentialStream*)arg, (const uint8_t*)p, len);
-    }
-}
-
-struct buffer_writer
-{
-    char *buffer;
-    uint32_t size;
-    uint32_t index;
-};
-
-static size_t _stream_imu_values_cmp_writer(cmp_ctx_t *ctx, const void *data, size_t count) {
-    struct buffer_writer *w = (struct buffer_writer*)ctx->buf;
-    if (count <= w->size - w->index) {
-        memcpy(w->buffer + w->index, data, count);
-        w->index += count;
-        return count;
-    }
-    return 0;
-}
-
-// not reentrant!
-void stream_imu_values(BaseSequentialStream *out)
-{
-    static char dtgrm[100];
-    static struct buffer_writer writer = {.buffer = dtgrm, .size = sizeof(dtgrm), .index = 0};
-    static cmp_ctx_t cmp;
-    cmp_init(&cmp, &writer, NULL, _stream_imu_values_cmp_writer);
-    while (1) {
-        chSysLock();
-        float gx = mpu_gyro_sample.rate[0];
-        float gy = mpu_gyro_sample.rate[1];
-        float gz = mpu_gyro_sample.rate[2];
-        float ax = mpu_acc_sample.acceleration[0];
-        float ay = mpu_acc_sample.acceleration[1];
-        float az = mpu_acc_sample.acceleration[2];
-        chSysUnlock();
-        writer.index = 0;
-        bool err = false;
-        err = err || !cmp_write_map(&cmp, 2);
-        const char *gyro_id = "gyro";
-        err = err || !cmp_write_str(&cmp, gyro_id, strlen(gyro_id));
-        err = err || !cmp_write_array(&cmp, 3);
-        err = err || !cmp_write_float(&cmp, gx);
-        err = err || !cmp_write_float(&cmp, gy);
-        err = err || !cmp_write_float(&cmp, gz);
-        const char *acc_id = "acc";
-        err = err || !cmp_write_str(&cmp, acc_id, strlen(acc_id));
-        err = err || !cmp_write_array(&cmp, 3);
-        err = err || !cmp_write_float(&cmp, ax);
-        err = err || !cmp_write_float(&cmp, ay);
-        err = err || !cmp_write_float(&cmp, az);
-        if (!err) {
-            serial_datagram_send(dtgrm, writer.index, _stream_imu_values_sndfn, out);
-        }
-        chThdSleepMilliseconds(10);
-    }
-}
-
 int main(void)
 {
     // check_bootloader();
@@ -129,26 +69,28 @@ int main(void)
 
     chThdCreateStatic(led_task_wa, sizeof(led_task_wa), LOWPRIO, led_task, NULL);
 
-    enable_charging();
+    exti_setup();
+
+    charging_enable();
 
     // sensors
     onboard_sensors_start();
 
-    // USB CDC
-    sduObjectInit(&SDU1);
-    sduStart(&SDU1, &serusbcfg);
-    usbDisconnectBus(serusbcfg.usbp);
-    chThdSleepMilliseconds(1000);
-    usbStart(serusbcfg.usbp, &usbcfg);
-    usbConnectBus(serusbcfg.usbp);
+    // radio
+    // radio_start();
+
+    // // USB CDC
+    // sduObjectInit(&SDU1);
+    // sduStart(&SDU1, &serusbcfg);
+    // usbDisconnectBus(serusbcfg.usbp);
+    // chThdSleepMilliseconds(1000);
+    // usbStart(serusbcfg.usbp, &usbcfg);
+    // usbConnectBus(serusbcfg.usbp);
     // while (SDU1.config->usbp->state != USB_ACTIVE) {
     //     chThdSleepMilliseconds(10);
     // }
 
-    // stream_imu_values((BaseSequentialStream*)&UART_CONN1);
-
     while (true) {
-        // shell_run((BaseSequentialStream*)&SDU1);
         shell_run((BaseSequentialStream*)&UART_CONN1);
         chThdSleepMilliseconds(500);
     }

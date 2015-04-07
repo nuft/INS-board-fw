@@ -2,7 +2,7 @@
 #include <chprintf.h>
 #include "board.h"
 #include "shell.h"
-#include "sensors/onboardsensors.h"
+#include "onboardsensors.h"
 #include "shell_commands.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
@@ -50,17 +50,16 @@ static void cmd_sensors(BaseSequentialStream *chp, int argc, char *argv[])
 
     int count = 100;
     while (count-- > 0) {
-        float g[3], a[3];
-        uint32_t p;
+        float g[3], a[3], p;
 
         chSysLock();
-        g[0] = mpu_gyro_sample.rate[0];
-        g[1] = mpu_gyro_sample.rate[1];
-        g[2] = mpu_gyro_sample.rate[2];
-        a[0] = mpu_acc_sample.acceleration[0];
-        a[1] = mpu_acc_sample.acceleration[1];
-        a[2] = mpu_acc_sample.acceleration[2];
-        p = barometer_pressure;
+        g[0] = gyro_sample.rate[0];
+        g[1] = gyro_sample.rate[1];
+        g[2] = gyro_sample.rate[2];
+        a[0] = acc_sample.acceleration[0];
+        a[1] = acc_sample.acceleration[1];
+        a[2] = acc_sample.acceleration[2];
+        p = barometer_sample.pressure;
         chSysUnlock();
 
         chprintf(chp, "gyro: %d %d %d, acc: %d %d %d, baro: %u\n",
