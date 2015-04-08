@@ -35,6 +35,9 @@ void radio_port_register(struct radio_port *port, uint8_t number);
 // get a packet buffer to send
 struct radio_packet *radio_get_packet_buffer(void);
 
+// free a packet buffer
+void radio_free_packet_buffer(struct radio_packet *p);
+
 // send a packet
 void radio_send(struct radio_port *port, struct radio_packet* packet);
 

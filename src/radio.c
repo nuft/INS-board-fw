@@ -41,7 +41,19 @@ static void nrf_setup_ptx(struct radio_config *cfg)
     // frequency = 2400 + <channel> [MHz], maximum: 2525MHz
     nrf24l01p_set_channel(dev, cfg->channel);
     // 0dBm power, datarate 2M/1M/250K
-    nrf24l01p_write_register(dev, RF_SETUP, RF_PWR(3) | RF_DR_250K);
+    uint8_t dr;
+    switch (cfg->datarate) {
+    case RADIO_DATARATE_1M:
+        dr = RF_DR_1M;
+        break;
+    case RADIO_DATARATE_2M:
+        dr = RF_DR_2M;
+        break;
+    default:
+        dr = RF_DR_250K;
+        break;
+    };
+    nrf24l01p_write_register(dev, RF_SETUP, RF_PWR(3) | dr);
     // Disable retransmission, 1500us delay
     nrf24l01p_write_register(dev, SETUP_RETR, ARD(5) | ARC(0));
     // enable dynamic packet length (DPL)
@@ -62,7 +74,7 @@ static void nrf_setup_ptx(struct radio_config *cfg)
 
 static struct radio_packet *radio_get_next_tx_packet(void)
 {
-    struct radio_packet *packet = NULL;
+    struct radio_packet *packet;
     int i;
     for (i = 0; i < 16; i++) {
         if (radio_ports[i] == NULL) {
@@ -73,10 +85,10 @@ static struct radio_packet *radio_get_next_tx_packet(void)
             uint8_t seq = (radio_ports[i]->_tx_seq++ << 4);
             // set port number and sequence number
             packet->data[0] = i | seq;
-            break;
+            return packet;
         }
     }
-    return packet;
+    return NULL;
 }
 
 static bool radio_forward_rx_packet(struct radio_packet *packet)
@@ -89,7 +101,7 @@ static bool radio_forward_rx_packet(struct radio_packet *packet)
         // same packet as last time
         return false;
     }
-    msg_t m = chMBPost(&radio_ports[i]->rx_mbox, (msg_t)packet);
+    msg_t m = chMBPost(&radio_ports[i]->rx_mbox, (msg_t)packet, TIME_IMMEDIATE);
     if (m != MSG_OK) {
         return false;
     }
@@ -116,7 +128,6 @@ static THD_FUNCTION(radio_thread, arg)
         nrf24l01p_write_register(nrf, STATUS, RX_DR | TX_DS | MAX_RT);
 
         packet = radio_get_next_tx_packet();
-
         if (packet != NULL) {
             nrf24l01p_write_tx_payload(nrf, packet->data, packet->length);
             chPoolFree(&radio_packet_pool, (void *)packet);
@@ -128,8 +139,9 @@ static THD_FUNCTION(radio_thread, arg)
         nrf_ce_active();
         eventmask_t ret = chEvtWaitAnyTimeout(NRF_INTERRUPT_EVENT, MS2ST(10));
         nrf_ce_inactive();
-
         if (ret == 0) {
+            // timeout
+            nrf24l01p_flush_rx(nrf);
             nrf24l01p_flush_tx(nrf);
             continue;
         }
@@ -151,9 +163,11 @@ static THD_FUNCTION(radio_thread, arg)
                 chPoolFree(&radio_packet_pool, (void *)packet);
             }
         } else if (status & MAX_RT) {
+            nrf24l01p_flush_rx(nrf);
             nrf24l01p_flush_tx(nrf);
         }
     }
+    return 0;
 }
 
 void radio_start(uint8_t channel, uint8_t *addr, uint8_t datarate)
@@ -169,14 +183,14 @@ void radio_start(uint8_t channel, uint8_t *addr, uint8_t datarate)
 
     /*
      * SPI2 configuration structure.
-     * SPI2 is on APB1 @ 36MHz / 4 = 9MHz
+     * SPI2 is on APB1 @ 42MHz / 4 = 10.5 MHz
      * CPHA=0, CPOL=0, 8bits frames, MSb transmitted first.
      */
     static SPIConfig spi_cfg = {
         .end_cb = NULL,
         .ssport = GPIOB,
         .sspad = GPIOB_NRF_CSN,
-        .cr1 =  SPI_CR1_BR_0 | SPI_CR1_BR_1
+        .cr1 =  SPI_CR1_BR_0
     };
 
     spiStart(&SPID2, &spi_cfg);
@@ -197,7 +211,7 @@ void radio_port_register(struct radio_port *port, uint8_t number)
 
 void radio_send(struct radio_port *port, struct radio_packet* packet)
 {
-    msg_t m =chMBPost(&port->tx_mbox, (msg_t)packet);
+    msg_t m = chMBPost(&port->tx_mbox, (msg_t)packet, TIME_IMMEDIATE);
     if (m != MSG_OK) {
         chPoolFree(&radio_packet_pool, packet);
     }
@@ -206,6 +220,11 @@ void radio_send(struct radio_port *port, struct radio_packet* packet)
 struct radio_packet *radio_get_packet_buffer(void)
 {
     return (struct radio_packet *)chPoolAlloc(&radio_packet_pool);
+}
+
+void radio_free_packet_buffer(struct radio_packet *p)
+{
+    chPoolFree(&radio_packet_pool, p);
 }
 
 /*
