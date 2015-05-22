@@ -3,7 +3,7 @@
 #include "board.h"
 #include "shell.h"
 #include "onboardsensors.h"
-#include "shell_commands.h"
+#include "commands.h"
 
 #define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 

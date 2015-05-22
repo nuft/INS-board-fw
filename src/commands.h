@@ -1,5 +1,5 @@
-#ifndef SHELL_COMMANDS_H
-#define SHELL_COMMANDS_H
+#ifndef COMMANDS_H
+#define COMMANDS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,4 +13,4 @@ void shell_run(BaseSequentialStream *stream);
 }
 #endif
 
-#endif /* SHELL_COMMANDS_H */
+#endif /* COMMANDS_H */

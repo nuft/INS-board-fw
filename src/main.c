@@ -7,7 +7,7 @@
 #include "serial-datagram/serial_datagram.h"
 #include "cmp/cmp.h"
 #include "exti.h"
-#include "shell_commands.h"
+#include "commands.h"
 #include "radio.h"
 #include <string.h>
 
