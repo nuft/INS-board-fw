@@ -78,8 +78,7 @@ int main(void)
     // onboard_sensors_start();
 
     // radio
-    uint8_t addr[] = {0x2A, 0x2A, 0x2A};
-    radio_start(0, addr, RADIO_DATARATE_250K);
+    radio_start();
 
     // // USB CDC
     // sduObjectInit(&SDU1);

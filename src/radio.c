@@ -10,7 +10,8 @@
 #define NRF_INTERRUPT_EVENT 1
 
 struct radio_config {
-    uint8_t address[3];
+    uint8_t address[5];
+    uint8_t address_len;
     uint8_t channel;
     uint8_t datarate;
     nrf24l01p_t dev;
@@ -41,19 +42,7 @@ static void nrf_setup_ptx(struct radio_config *cfg)
     // frequency = 2400 + <channel> [MHz], maximum: 2525MHz
     nrf24l01p_set_channel(dev, cfg->channel);
     // 0dBm power, datarate 2M/1M/250K
-    uint8_t dr;
-    switch (cfg->datarate) {
-    case RADIO_DATARATE_1M:
-        dr = RF_DR_1M;
-        break;
-    case RADIO_DATARATE_2M:
-        dr = RF_DR_2M;
-        break;
-    default:
-        dr = RF_DR_250K;
-        break;
-    };
-    nrf24l01p_write_register(dev, RF_SETUP, RF_PWR(3) | dr);
+    nrf24l01p_write_register(dev, RF_SETUP, RF_PWR(3) | cfg->datarate);
     // Disable retransmission, 1500us delay
     nrf24l01p_write_register(dev, SETUP_RETR, ARD(5) | ARC(0));
     // enable dynamic packet length (DPL)
@@ -170,13 +159,14 @@ static THD_FUNCTION(radio_thread, arg)
     return 0;
 }
 
-void radio_start(uint8_t channel, uint8_t *addr, uint8_t datarate)
+void radio_start(void)
 {
-    static struct radio_config config;
-
-    config.channel = channel;
-    config.datarate = datarate;
-    memcpy(config.address, addr, 3);
+    static struct radio_config config = {
+        .channel = 42,
+        .datarate = RF_DR_2M,
+        .address = {1,2,3},
+        .address_len = 3
+    };
 
     chPoolObjectInit(&radio_packet_pool, sizeof(struct radio_packet), NULL);
     chPoolLoadArray(&radio_packet_pool, radio_packet_pool_buf, RADIO_BUF_SIZE);

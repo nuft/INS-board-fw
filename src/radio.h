@@ -8,10 +8,6 @@ extern "C" {
 #include <stdint.h>
 #include <ch.h>
 
-#define RADIO_DATARATE_250K 0
-#define RADIO_DATARATE_1M   1
-#define RADIO_DATARATE_2M   2
-
 struct radio_packet {
     uint8_t length;
     uint8_t data[32];
@@ -25,7 +21,7 @@ struct radio_port {
 };
 
 // start the radio thread
-void radio_start(uint8_t channel, uint8_t *addr, uint8_t datarate);
+void radio_start(void);
 
 // register a port for reception and sending
 // notes: - the mailboxes of the port have to be initialized
