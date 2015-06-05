@@ -17,3 +17,5 @@ PROJSRC += src/timestamp/timestamp_stm32.c
 PROJSRC += src/timestamp/timestamp.c
 PROJSRC += src/nrf24l01p.c
 PROJSRC += src/radio.c
+PROJSRC += src/stream.c
+PROJSRC += src/cmp_mem_access/cmp_mem_access.c

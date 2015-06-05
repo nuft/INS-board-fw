@@ -20,7 +20,9 @@ struct radio_config {
 #define RADIO_BUF_SIZE 32
 memory_pool_t radio_packet_pool;
 struct radio_packet radio_packet_pool_buf[RADIO_BUF_SIZE];
-struct radio_port *radio_ports[16] = {NULL};
+// struct radio_port *radio_ports[16] = {NULL};
+// temp
+mailbox_t radio_tx_mbox;
 
 static void nrf_ce_active(void)
 {
@@ -64,38 +66,44 @@ static void nrf_setup_ptx(struct radio_config *cfg)
 static struct radio_packet *radio_get_next_tx_packet(void)
 {
     struct radio_packet *packet;
-    int i;
-    for (i = 0; i < 16; i++) {
-        if (radio_ports[i] == NULL) {
-            continue;
-        }
-        msg_t m = chMBFetch(&radio_ports[i]->tx_mbox, (msg_t *)&packet, TIME_IMMEDIATE);
-        if (m == MSG_OK) {
-            uint8_t seq = (radio_ports[i]->_tx_seq++ << 4);
-            // set port number and sequence number
-            packet->data[0] = i | seq;
-            return packet;
-        }
-    }
-    return NULL;
+    msg_t m;
+    do {
+        m = chMBFetch(&radio_tx_mbox, (msg_t *)&packet, TIME_INFINITE);
+    } while (m != MSG_OK);
+    return packet;
+
+    // int i;
+    // for (i = 0; i < 16; i++) {
+    //     if (radio_ports[i] == NULL) {
+    //         continue;
+    //     }
+    //     msg_t m = chMBFetch(&radio_ports[i]->tx_mbox, (msg_t *)&packet, TIME_IMMEDIATE);
+    //     if (m == MSG_OK) {
+    //         uint8_t seq = (radio_ports[i]->_tx_seq++ << 4);
+    //         // set port number and sequence number
+    //         packet->data[0] = i | seq;
+    //         return packet;
+    //     }
+    // }
+    // return NULL;
 }
 
-static bool radio_forward_rx_packet(struct radio_packet *packet)
-{
-    uint8_t i = packet->data[0] & 0x0f;
-    if (radio_ports[i] == NULL) {
-        return false;
-    }
-    if ((packet->data[0] & 0xf0) == (radio_ports[i]->_rx_seq << 4)) {
-        // same packet as last time
-        return false;
-    }
-    msg_t m = chMBPost(&radio_ports[i]->rx_mbox, (msg_t)packet, TIME_IMMEDIATE);
-    if (m != MSG_OK) {
-        return false;
-    }
-    return true;
-}
+// static bool radio_forward_rx_packet(struct radio_packet *packet)
+// {
+//     uint8_t i = packet->data[0] & 0x0f;
+//     if (radio_ports[i] == NULL) {
+//         return false;
+//     }
+//     if ((packet->data[0] & 0xf0) == (radio_ports[i]->_rx_seq << 4)) {
+//         // same packet as last time
+//         return false;
+//     }
+//     msg_t m = chMBPost(&radio_ports[i]->rx_mbox, (msg_t)packet, TIME_IMMEDIATE);
+//     if (m != MSG_OK) {
+//         return false;
+//     }
+//     return true;
+// }
 
 static THD_WORKING_AREA(radio_thread_wa, 256);
 static THD_FUNCTION(radio_thread, arg)
@@ -148,9 +156,11 @@ static THD_FUNCTION(radio_thread, arg)
             }
             nrf24l01p_read_rx_payload(nrf, packet->data, len);
             packet->length = len;
-            if (!radio_forward_rx_packet(packet)) {
-                chPoolFree(&radio_packet_pool, (void *)packet);
-            }
+            // ignore received packtes at the moment
+            chPoolFree(&radio_packet_pool, (void *)packet);
+            // if (!radio_forward_rx_packet(packet)) {
+            //     chPoolFree(&radio_packet_pool, (void *)packet);
+            // }
         } else if (status & MAX_RT) {
             nrf24l01p_flush_rx(nrf);
             nrf24l01p_flush_tx(nrf);
@@ -161,6 +171,9 @@ static THD_FUNCTION(radio_thread, arg)
 
 void radio_start(void)
 {
+    static msg_t radio_tx_mbox_buf[4];
+    chMBObjectInit(&radio_tx_mbox, radio_tx_mbox_buf, 4);
+
     static struct radio_config config = {
         .channel = 42,
         .datarate = RF_DR_2M,
@@ -189,33 +202,61 @@ void radio_start(void)
     chThdCreateStatic(radio_thread_wa, sizeof(radio_thread_wa), NORMALPRIO, radio_thread, &config);
 }
 
-void radio_port_register(struct radio_port *port, uint8_t number)
-{
-    if (number > 15) {
-        return;
-    }
-    port->_tx_seq = 0;
-    port->_rx_seq = 0xff;
-    radio_ports[number] = port;
-}
+// void radio_port_register(struct radio_port *port, uint8_t number)
+// {
+//     if (number > 15) {
+//         return;
+//     }
+//     radio_ports[number] = port;
 
-void radio_send(struct radio_port *port, struct radio_packet* packet)
+//     chBSemObjectInit(&port->bsem, true);
+// }
+
+// void radio_packet_send(struct radio_port *port, struct radio_packet* packet)
+// {
+//     msg_t m = chMBPost(&port->tx_mbox, (msg_t)packet, TIME_IMMEDIATE);
+//     if (m != MSG_OK) {
+//         chPoolFree(&radio_packet_pool, packet);
+//     }
+// }
+
+void radio_send(struct radio_packet* packet)
 {
-    msg_t m = chMBPost(&port->tx_mbox, (msg_t)packet, TIME_IMMEDIATE);
+    msg_t m = chMBPost(&radio_tx_mbox, (msg_t)packet, TIME_INFINITE);
     if (m != MSG_OK) {
         chPoolFree(&radio_packet_pool, packet);
     }
 }
 
-struct radio_packet *radio_get_packet_buffer(void)
+struct radio_packet *radio_packet_alloc(void)
 {
     return (struct radio_packet *)chPoolAlloc(&radio_packet_pool);
 }
 
-void radio_free_packet_buffer(struct radio_packet *p)
+void radio_packet_free(struct radio_packet *p)
 {
     chPoolFree(&radio_packet_pool, p);
 }
+
+// // blocking send
+// void radio_send_data(struct radio_port *port, uint8_t *data, uint8_t length)
+// {
+//     if (length > 32 || length == 0) {
+//         return;
+//     }
+
+//     struct radio_packet *pkt = radio_packet_alloc();
+//     pkt->type = RADIO_PACKET_REFERENCE;
+//     pkt->length = length;
+
+//     msg_t m = chMBPost(&port->tx_mbox, (msg_t)pkt, TIME_IMMEDIATE);
+//     if (m != MSG_OK) {
+//         radio_packet_free(pkt);
+//         return;
+//     }
+
+//     chBSemWait(&port->bsem);
+// }
 
 /*
 void nrf_setup_prx(nrf24l01p_t *dev)

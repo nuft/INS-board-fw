@@ -10,6 +10,7 @@
 #include "commands.h"
 #include "radio.h"
 #include <string.h>
+#include "stream.h"
 
 SerialUSBDriver SDU1;
 
@@ -75,10 +76,16 @@ int main(void)
     charging_enable();
 
     // sensors
-    // onboard_sensors_start();
+    onboard_sensors_start();
 
     // radio
     radio_start();
+
+    stream_thread_start();
+
+    while (1) {
+        chThdSleepMilliseconds(1000);
+    }
 
     // // USB CDC
     // sduObjectInit(&SDU1);
@@ -91,35 +98,35 @@ int main(void)
     //     chThdSleepMilliseconds(10);
     // }
 
-    BaseSequentialStream *stdout = (BaseSequentialStream*)&UART_CONN1;
+    // BaseSequentialStream *stdout = (BaseSequentialStream*)&UART_CONN1;
 
-    struct radio_port port4;
-    msg_t tx_buf[1], rx_buf[1];
-    chMBObjectInit(&port4.tx_mbox, tx_buf, 1);
-    chMBObjectInit(&port4.rx_mbox, rx_buf, 1);
-    radio_port_register(&port4, 4);
+    // struct radio_port port4;
+    // msg_t tx_buf[1], rx_buf[1];
+    // chMBObjectInit(&port4.tx_mbox, tx_buf, 1);
+    // chMBObjectInit(&port4.rx_mbox, rx_buf, 1);
+    // radio_port_register(&port4, 4);
 
-    struct radio_packet *packet;
-    while (true) {
-        // shell_run((BaseSequentialStream*)&UART_CONN1);
-        msg_t m;
-        do {
-            m = chMBFetch(&port4.rx_mbox, (msg_t *)&packet, TIME_IMMEDIATE);
-            if (m == MSG_OK) {
-                packet->data[31] = 0;
-                chprintf(stdout, ".");
-                // chprintf(stdout, "[%02x]\n", packet->data[0]);
-                // chprintf(stdout, "[%x] %s (%u)\n", packet->data[0], &packet->data[1], packet->length);
-                radio_free_packet_buffer(packet);
-            }
-        } while (m == MSG_OK);
-        chThdSleepMilliseconds(10);
-        packet = radio_get_packet_buffer();
-        if (packet != NULL) {
-            const char *msg = "nanocopter";
-            packet->length = strlen(msg) + 2;
-            strcpy((char *)&packet->data[1], msg);
-            radio_send(&port4, packet);
-        }
-    }
+    // struct radio_packet *packet;
+    // while (true) {
+    //     // shell_run((BaseSequentialStream*)&UART_CONN1);
+    //     msg_t m;
+    //     do {
+    //         m = chMBFetch(&port4.rx_mbox, (msg_t *)&packet, TIME_IMMEDIATE);
+    //         if (m == MSG_OK) {
+    //             packet->data[31] = 0;
+    //             chprintf(stdout, ".");
+    //             chprintf(stdout, "[%02x]\n", packet->data[0]);
+    //             // chprintf(stdout, "[%x] %s (%u)\n", packet->data[0], &packet->data[1], packet->length);
+    //             radio_free_packet_buffer(packet);
+    //         }
+    //     } while (m == MSG_OK);
+    //     chThdSleepMilliseconds(10);
+    //     packet = radio_get_packet_buffer();
+    //     if (packet != NULL) {
+    //         const char *msg = "nanocopter";
+    //         packet->length = strlen(msg) + 2;
+    //         strcpy((char *)&packet->data[1], msg);
+    //         radio_send(&port4, packet);
+    //     }
+    // }
 }
