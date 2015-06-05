@@ -16,3 +16,6 @@
 [submodule "src/timestamp"]
 	path = src/timestamp
 	url = https://github.com/nuft/timestamp.git
+[submodule "src/cmp_mem_access"]
+	path = src/cmp_mem_access
+	url = https://github.com/Stapelzeiger/cmp_mem_access.git
