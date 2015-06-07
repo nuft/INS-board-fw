@@ -86,21 +86,6 @@ void charging_disable(void)
     palClearPad(GPIOA, GPIOA_BAT_NTC);
 }
 
-void panic_handler(const char *reason)
-{
-    (void)reason;
-
-    palClearPad(GPIOC, GPIOC_LED_STATUS);
-
-    charging_disable(); // safety
-
-#ifdef DEBUG
-    while (1);
-#else
-    NVIC_SystemReset();
-#endif
-}
-
 static int error_level_cnt[2] = {0,0};
 
 void error_set(int level)

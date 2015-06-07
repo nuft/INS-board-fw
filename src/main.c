@@ -9,8 +9,8 @@
 #include "exti.h"
 #include "commands.h"
 #include "radio.h"
-#include <string.h>
 #include "stream.h"
+#include <timestamp/timestamp_stm32.h>
 
 SerialUSBDriver SDU1;
 
@@ -59,6 +59,21 @@ static THD_FUNCTION(led_task, arg)
     return 0;
 }
 
+void panic_handler(const char *reason)
+{
+    (void)reason;
+
+    palClearPad(GPIOC, GPIOC_LED_STATUS);
+
+    charging_disable(); // safety
+
+#ifdef DEBUG
+    while (1);
+#else
+    NVIC_SystemReset();
+#endif
+}
+
 int main(void)
 {
     // check_bootloader();
@@ -69,17 +84,21 @@ int main(void)
     sdStart(&UART_CONN1, NULL);
     chprintf((BaseSequentialStream*)&UART_CONN1, "\n> start\n");
 
+    timestamp_stm32_init();
+
     chThdCreateStatic(led_task_wa, sizeof(led_task_wa), LOWPRIO, led_task, NULL);
 
     exti_setup();
 
     charging_enable();
 
-    // sensors
-    onboard_sensors_start();
+    chThdSleepMilliseconds(500);
 
     // radio
     radio_start();
+
+    // sensors
+    onboard_sensors_start();
 
     stream_thread_start();
 

@@ -40,37 +40,50 @@ static void nrf_setup_ptx(struct radio_config *cfg)
 
     nrf_ce_inactive();
     // 2 byte CRC, enable TX_DS, RX_DR and MAX_RT IRQ
-    nrf24l01p_write_register(dev, CONFIG, PWR_UP | EN_CRC | CRCO);
+    uint8_t config = EN_CRC | CRCO;
+    nrf24l01p_write_register(dev, CONFIG, config);
     // frequency = 2400 + <channel> [MHz], maximum: 2525MHz
-    nrf24l01p_set_channel(dev, cfg->channel);
+    // nrf24l01p_set_channel(dev, cfg->channel);
+    nrf24l01p_set_channel(dev, 42);
     // 0dBm power, datarate 2M/1M/250K
-    nrf24l01p_write_register(dev, RF_SETUP, RF_PWR(3) | cfg->datarate);
+    // nrf24l01p_write_register(dev, RF_SETUP, RF_PWR(3) | cfg->datarate);
+    nrf24l01p_write_register(dev, RF_SETUP, RF_PWR(3) | RF_DR_250K);
     // Disable retransmission, 1500us delay
-    nrf24l01p_write_register(dev, SETUP_RETR, ARD(5) | ARC(0));
+    nrf24l01p_write_register(dev, SETUP_RETR, ARD(5) | ARC(1));
+    // nrf24l01p_write_register(dev, SETUP_RETR, ARD(15) | ARC(15));
     // enable dynamic packet length (DPL)
     nrf24l01p_write_register(dev, FEATURE, EN_DPL | EN_ACK_PAY);
-    // 3 byte address length
+    // enable Enhanced ShockBurst Auto Acknowledgment
+    nrf24l01p_write_register(dev, EN_AA, ENAA_P0);
+     // 3 byte address length
     nrf24l01p_write_register(dev, SETUP_AW, AW_3);
     // TX address
-    nrf24l01p_set_addr(dev, TX_ADDR, cfg->address, 3);
+    // nrf24l01p_set_addr(dev, TX_ADDR, cfg->address, 3);
+    uint8_t addr[] = {0x2A,0x2A,0x2A};
+    nrf24l01p_set_addr(dev, TX_ADDR, addr, 3);
     // RX address
-    nrf24l01p_set_addr(dev, RX_ADDR_P0, cfg->address, 3);
+    // nrf24l01p_set_addr(dev, RX_ADDR_P0, cfg->address, 3);
+    nrf24l01p_set_addr(dev, RX_ADDR_P0, addr, 3);
     nrf24l01p_write_register(dev, DYNPD, DPL_P0);
     // clear data fifo
     nrf24l01p_flush_tx(dev);
     nrf24l01p_flush_rx(dev);
     // clear IRQ flags
     nrf24l01p_write_register(dev, STATUS, RX_DR | TX_DS | MAX_RT);
+    nrf24l01p_write_register(dev, CONFIG, config | PWR_UP);
 }
 
-static struct radio_packet *radio_get_next_tx_packet(void)
+struct radio_packet *radio_get_next_tx_packet(void)
 {
     struct radio_packet *packet;
     msg_t m;
-    do {
-        m = chMBFetch(&radio_tx_mbox, (msg_t *)&packet, TIME_INFINITE);
-    } while (m != MSG_OK);
-    return packet;
+    // m = chMBFetch(&radio_tx_mbox, (msg_t *)&packet, TIME_INFINITE);
+    // m = chMBFetch(&radio_tx_mbox, (msg_t *)&packet, TIME_IMMEDIATE);
+    m = chMBFetch(&radio_tx_mbox, (msg_t *)&packet, MS2ST(100));
+    if (m == MSG_OK) {
+        return packet;
+    }
+    return NULL;
 
     // int i;
     // for (i = 0; i < 16; i++) {
@@ -117,9 +130,14 @@ static THD_FUNCTION(radio_thread, arg)
     chEvtRegisterMaskWithFlags(&exti_events, &radio_event_listener,
         NRF_INTERRUPT_EVENT, EXTI_EVENT_NRF_IRQ);
 
-    const uint8_t null_packet[] = {0xff};
+    // const uint8_t null_packet[] = {
+    //         0x81,0xa4,0x67,0x79,0x72,0x6f,0x93,0xcb,0x3f,0xe7,0x9d,0x22,
+    //         0x40,0x33,0x82,0xe6,0x2a,0x15
+    //     };
+    // const uint8_t null_packet[] = {0xff};
+    uint8_t null_packet[] = {0};
 
-    struct radio_packet *packet;
+    struct radio_packet *packet, *old = NULL;
     while (1) {
         // clear interrupts
         nrf24l01p_write_register(nrf, STATUS, RX_DR | TX_DS | MAX_RT);
@@ -127,14 +145,28 @@ static THD_FUNCTION(radio_thread, arg)
         packet = radio_get_next_tx_packet();
         if (packet != NULL) {
             nrf24l01p_write_tx_payload(nrf, packet->data, packet->length);
-            chPoolFree(&radio_packet_pool, (void *)packet);
+            if (old != NULL) {
+                chPoolFree(&radio_packet_pool, (void *)old);
+            }
+            old = packet;
         } else {
+            // nrf24l01p_flush_rx(nrf);
+            // nrf24l01p_flush_tx(nrf);
+            // chThdSleepMilliseconds(10);
+            // continue;
+
             // nothing to send
             nrf24l01p_write_tx_payload(nrf, null_packet, sizeof(null_packet));
+            // if (old == NULL) {
+            //     nrf24l01p_write_tx_payload(nrf, null_packet, sizeof(null_packet));
+            // } else {
+            //     nrf24l01p_write_tx_payload(nrf, old->data, old->length);
+            // }
         }
 
         nrf_ce_active();
         eventmask_t ret = chEvtWaitAnyTimeout(NRF_INTERRUPT_EVENT, MS2ST(10));
+        chThdSleepMilliseconds(1);
         nrf_ce_inactive();
         if (ret == 0) {
             // timeout
@@ -171,13 +203,13 @@ static THD_FUNCTION(radio_thread, arg)
 
 void radio_start(void)
 {
-    static msg_t radio_tx_mbox_buf[4];
-    chMBObjectInit(&radio_tx_mbox, radio_tx_mbox_buf, 4);
+    static msg_t radio_tx_mbox_buf[10];
+    chMBObjectInit(&radio_tx_mbox, radio_tx_mbox_buf, 10);
 
     static struct radio_config config = {
         .channel = 42,
-        .datarate = RF_DR_2M,
-        .address = {1,2,3},
+        .datarate = RF_DR_250K,
+        .address = {42,42,42},
         .address_len = 3
     };
 
@@ -222,8 +254,10 @@ void radio_start(void)
 
 void radio_send(struct radio_packet* packet)
 {
-    msg_t m = chMBPost(&radio_tx_mbox, (msg_t)packet, TIME_INFINITE);
+    msg_t m = chMBPost(&radio_tx_mbox, (msg_t)packet, TIME_IMMEDIATE);
+    // msg_t m = chMBPost(&radio_tx_mbox, (msg_t)packet, MS2ST(100));
     if (m != MSG_OK) {
+        panic_handler("packet send");
         chPoolFree(&radio_packet_pool, packet);
     }
 }

@@ -99,7 +99,7 @@ void nrf24l01p_flush_rx(nrf24l01p_t *dev)
 
 uint8_t nrf24l01p_read_rx_payload_len(nrf24l01p_t *dev)
 {
-    uint8_t len;
+    uint8_t len = 0;
     nrf24l01p_command_read(dev, R_RX_PL_WID, &len, 1);
     return len;
 }
