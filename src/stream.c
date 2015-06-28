@@ -123,6 +123,36 @@ static void stream_baro(void)
     }
 }
 
+static void stream_battery(void)
+{
+    struct radio_packet *p = radio_packet_alloc();
+    if (p == NULL) {
+        return;
+    }
+
+    float volt, cur;
+    chSysLock();
+    volt = battery_voltage;
+    cur = battery_current;
+    chSysUnlock();
+
+    cmp_mem_access_init(&cmp, &mem, &p->data[0], 32);
+
+    bool err = false;
+    err = err || !cmp_write_map(&cmp, 2);
+    const char *volt_id = "V_Bat";
+    err = err || !cmp_write_str(&cmp, volt_id, strlen(volt_id));
+    err = err || !cmp_write_float(&cmp, volt);
+    const char *cur_id = "I_Bat";
+    err = err || !cmp_write_str(&cmp, cur_id, strlen(cur_id));
+    err = err || !cmp_write_float(&cmp, cur);
+
+    if (!err) {
+        p->length = cmp_mem_access_get_pos(&mem);
+        radio_send(p);
+    }
+}
+
 static THD_WORKING_AREA(stream_thread_wa, 256);
 static THD_FUNCTION(stream_thread, arg)
 {
@@ -138,6 +168,8 @@ static THD_FUNCTION(stream_thread, arg)
         stream_acc();
         chThdSleepMilliseconds(5);
         stream_baro();
+        chThdSleepMilliseconds(5);
+        stream_battery();
     }
     return 0;
 }
