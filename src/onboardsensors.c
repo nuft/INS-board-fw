@@ -1,7 +1,9 @@
 #include <math.h>
 #include <ch.h>
+#include <board.h>
 #include "sensors/mpu60X0.h"
 #include "sensors/ms5611.h"
+#include "ina220.h"
 #include "timestamp/timestamp.h"
 #include "sensors.h"
 #include "exti.h"
@@ -9,6 +11,8 @@
 rate_gyro_sample_t gyro_sample;
 accelerometer_sample_t acc_sample;
 barometer_sample_t barometer_sample;
+float battery_voltage;
+float battery_current;
 
 #define MPU_IRQ_EVENT_MASK 1
 
@@ -126,6 +130,70 @@ static THD_FUNCTION(barometer_thread, arg)
 
 }
 
+#define LOW_BATT_PWR_DWN_THRESHOLD  3.0     // [V]
+#define LOW_BATT_WARN_THRESHOLD     3.3     // [V]
+
+static THD_WORKING_AREA(power_monitor_thread_wa, 256);
+static THD_FUNCTION(power_monitor_thread, arg)
+{
+    I2CDriver *driver = (I2CDriver *)arg;
+    chRegSetThreadName("power monitor");
+
+    i2cAcquireBus(driver);
+    ina220_setup(driver, INA220_ADDRESS);
+    i2cReleaseBus(driver);
+
+    // set current: high: 500mA, float = 100mA, low = ISET (800mA)
+    palSetPad(GPIOA, GPIOA_CHG_ISET);
+    charging_disable();
+
+    bool warn = false;
+    while (1) {
+        // wait at least 8.51ms
+        chThdSleepMilliseconds(9);
+
+        bool success;
+        int16_t v_shunt, v_bus;
+        i2cAcquireBus(driver);
+        success = ina220_read_bus_voltage(driver, INA220_ADDRESS, &v_bus);
+        success |= ina220_read_shunt_voltage(driver, INA220_ADDRESS, &v_shunt);
+        i2cReleaseBus(driver);
+        if (!success) {
+            error_set(ERROR_LEVEL_WARNING);
+            return 0;
+        }
+
+        float voltage = (float)((v_bus & 0xFFF8)>>3) * 0.004;
+        // 15mOhm shunt resistor
+        float current = (float)v_shunt * 0.01 / 15;
+
+        chSysLock();
+        battery_voltage = voltage;
+        battery_current = current;
+        chSysUnlock();
+
+        if (voltage > 4.05 || current < 0.015) {
+            charging_disable();
+        } else if (voltage < 3.6) {
+            charging_enable();
+        }
+
+        if (voltage < LOW_BATT_PWR_DWN_THRESHOLD) {
+            power_down();
+        }
+
+        if (voltage < LOW_BATT_WARN_THRESHOLD && !warn) {
+            error_set(ERROR_LEVEL_WARNING);
+            warn = true;
+        } else if (warn) {
+            error_clear(ERROR_LEVEL_WARNING);
+            warn = false;
+        }
+    }
+    return 0;
+}
+
+
 void onboard_sensors_start(void)
 {
     /*
@@ -141,5 +209,6 @@ void onboard_sensors_start(void)
     i2cStart(driver, &i2c_cfg);
 
     chThdCreateStatic(imu_sensors_wa, sizeof(imu_sensors_wa), NORMALPRIO, imu_sensors, driver);
-    chThdCreateStatic(barometer_thread_wa, sizeof(barometer_thread_wa), LOWPRIO, barometer_thread, driver);
+    chThdCreateStatic(barometer_thread_wa, sizeof(barometer_thread_wa), NORMALPRIO-1, barometer_thread, driver);
+    chThdCreateStatic(power_monitor_thread_wa, sizeof(power_monitor_thread_wa), NORMALPRIO, power_monitor_thread, driver);
 }
