@@ -86,6 +86,11 @@ void charging_disable(void)
     palClearPad(GPIOA, GPIOA_BAT_NTC);
 }
 
+void power_down(void)
+{
+    palClearPad(GPIOB, GPIOB_PB_CTRL_KILL);
+}
+
 static int error_level_cnt[2] = {0,0};
 
 void error_set(int level)

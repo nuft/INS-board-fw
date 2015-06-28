@@ -544,6 +544,7 @@ void check_bootloader(void);
 void board_init(void);
 void charging_enable(void);
 void charging_disable(void);
+void power_down(void);
 
 #define ERROR_LEVEL_NORMAL         0
 #define ERROR_LEVEL_WARNING        1
