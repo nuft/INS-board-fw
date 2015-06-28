@@ -121,7 +121,7 @@ static THD_FUNCTION(barometer_thread, arg)
         barometer_sample.temperature = (float)temp/100;
         chSysUnlock();
 
-        chThdSleepMilliseconds(100);
+        chThdSleepMilliseconds(1);
     }
 
 }
