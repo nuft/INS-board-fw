@@ -3,9 +3,6 @@
 #include "board.h"
 #include "shell.h"
 #include "onboardsensors.h"
-#include "commands.h"
-
-#define SHELL_WA_SIZE   THD_WORKING_AREA_SIZE(2048)
 
 static void cmd_mem(BaseSequentialStream *chp, int argc, char *argv[])
 {
@@ -84,24 +81,10 @@ static void cmd_dfu(BaseSequentialStream *chp, int argc, char *argv[])
     reboot_and_run_bootloader();
 }
 
-static const ShellCommand commands[] = {
+const ShellCommand shell_commands[] = {
     {"mem", cmd_mem},
     {"threads", cmd_threads},
     {"sensors", cmd_sensors},
     {"dfu", cmd_dfu},
     {NULL, NULL}
 };
-
-void shell_run(BaseSequentialStream *stream)
-{
-    ShellConfig shell_cfg1 = {
-        stream,
-        commands
-    };
-    shellInit();
-    thread_t *shelltp = shellCreate(&shell_cfg1, SHELL_WA_SIZE, NORMALPRIO);
-    while (!chThdTerminatedX(shelltp)) {
-        chThdSleepMilliseconds(10);
-    }
-    chThdRelease(shelltp);
-}

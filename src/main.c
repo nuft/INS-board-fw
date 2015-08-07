@@ -1,18 +1,25 @@
 #include <ch.h>
 #include <hal.h>
 #include <chprintf.h>
+#include <nullstreams.h>
 #include <string.h>
 #include "usbcfg.h"
 #include "onboardsensors.h"
 #include "serial-datagram/serial_datagram.h"
 #include "cmp/cmp.h"
 #include "exti.h"
-#include "commands.h"
+#include "shell_cmd.h"
 #include "radio.h"
 #include "stream.h"
 #include <timestamp/timestamp_stm32.h>
 
 SerialUSBDriver SDU1;
+NullStream null_stream;
+// stream settings
+BaseSequentialStream *debug_stream = (BaseSequentialStream *)&UART_EXT;
+// BaseSequentialStream *debug_stream = (BaseSequentialStream *)&null_stream;
+BaseSequentialStream *shell_stream = (BaseSequentialStream *)&SDU1;
+// BaseSequentialStream *shell_stream = &UART_CONN1;
 
 /*
  *  Heartbeat, Error LED thread
@@ -68,7 +75,11 @@ void panic_handler(const char *reason)
     charging_disable(); // safety
 
 #ifdef DEBUG
-    while (1);
+    while (1) {
+        if (!palReadPad(GPIOB, GPIOB_PB_CTRL_KILL)) {
+            power_down();
+        }
+    }
 #else
     NVIC_SystemReset();
 #endif
@@ -76,76 +87,48 @@ void panic_handler(const char *reason)
 
 int main(void)
 {
-    // check_bootloader();
     halInit();
     chSysInit();
 
-    // debug UART
+    nullObjectInit(&null_stream);
     sdStart(&UART_CONN1, NULL);
-    chprintf((BaseSequentialStream*)&UART_CONN1, "\n> start\n");
-
-    timestamp_stm32_init();
+    sdStart(&UART_EXT, NULL);
+    chprintf(debug_stream, "\n> boot\n");
 
     chThdCreateStatic(led_task_wa, sizeof(led_task_wa), LOWPRIO, led_task, NULL);
 
+    timestamp_stm32_init();
     exti_setup();
 
-    charging_enable();
-
-    chThdSleepMilliseconds(500);
-
     // radio
-    radio_start();
-
+    // radio_start();
     // sensors
-    onboard_sensors_start();
+    // onboard_sensors_start();
+    // stream_thread_start();
 
-    stream_thread_start();
+    // USB CDC serial device
+    sduObjectInit(&SDU1);
+    sduStart(&SDU1, &serusbcfg);
+    // USB start and connect
+    usbDisconnectBus(serusbcfg.usbp);
+    chThdSleepMilliseconds(1500);
+    usbStart(serusbcfg.usbp, &usbcfg);
+    usbConnectBus(serusbcfg.usbp);
 
-    while (1) {
-        chThdSleepMilliseconds(1000);
+    shellInit();
+    static thread_t *shelltp = NULL;
+    static ShellConfig shell_cfg;
+    shell_cfg.sc_channel = shell_stream;
+    shell_cfg.sc_commands = shell_commands;
+    while (true) {
+        if (!shelltp) {
+            if (shell_stream != (BaseSequentialStream *) &SDU1 || SDU1.config->usbp->state == USB_ACTIVE) {
+                shelltp = shellCreate(&shell_cfg, THD_WORKING_AREA_SIZE(2048), NORMALPRIO);
+            }
+        } else if (chThdTerminatedX(shelltp)) {
+            chThdRelease(shelltp);
+            shelltp = NULL;
+        }
+        chThdSleepMilliseconds(500);
     }
-
-    // // USB CDC
-    // sduObjectInit(&SDU1);
-    // sduStart(&SDU1, &serusbcfg);
-    // usbDisconnectBus(serusbcfg.usbp);
-    // chThdSleepMilliseconds(1000);
-    // usbStart(serusbcfg.usbp, &usbcfg);
-    // usbConnectBus(serusbcfg.usbp);
-    // while (SDU1.config->usbp->state != USB_ACTIVE) {
-    //     chThdSleepMilliseconds(10);
-    // }
-
-    // BaseSequentialStream *stdout = (BaseSequentialStream*)&UART_CONN1;
-
-    // struct radio_port port4;
-    // msg_t tx_buf[1], rx_buf[1];
-    // chMBObjectInit(&port4.tx_mbox, tx_buf, 1);
-    // chMBObjectInit(&port4.rx_mbox, rx_buf, 1);
-    // radio_port_register(&port4, 4);
-
-    // struct radio_packet *packet;
-    // while (true) {
-    //     // shell_run((BaseSequentialStream*)&UART_CONN1);
-    //     msg_t m;
-    //     do {
-    //         m = chMBFetch(&port4.rx_mbox, (msg_t *)&packet, TIME_IMMEDIATE);
-    //         if (m == MSG_OK) {
-    //             packet->data[31] = 0;
-    //             chprintf(stdout, ".");
-    //             chprintf(stdout, "[%02x]\n", packet->data[0]);
-    //             // chprintf(stdout, "[%x] %s (%u)\n", packet->data[0], &packet->data[1], packet->length);
-    //             radio_free_packet_buffer(packet);
-    //         }
-    //     } while (m == MSG_OK);
-    //     chThdSleepMilliseconds(10);
-    //     packet = radio_get_packet_buffer();
-    //     if (packet != NULL) {
-    //         const char *msg = "nanocopter";
-    //         packet->length = strlen(msg) + 2;
-    //         strcpy((char *)&packet->data[1], msg);
-    //         radio_send(&port4, packet);
-    //     }
-    // }
 }
