@@ -20,3 +20,4 @@ PROJSRC += src/radio.c
 PROJSRC += src/stream.c
 PROJSRC += src/cmp_mem_access/cmp_mem_access.c
 PROJSRC += src/ina220.c
+PROJSRC += src/motor.c
