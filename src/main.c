@@ -18,8 +18,8 @@ NullStream null_stream;
 // stream settings
 BaseSequentialStream *debug_stream = (BaseSequentialStream *)&UART_EXT;
 // BaseSequentialStream *debug_stream = (BaseSequentialStream *)&null_stream;
-BaseSequentialStream *shell_stream = (BaseSequentialStream *)&SDU1;
-// BaseSequentialStream *shell_stream = &UART_CONN1;
+// BaseSequentialStream *shell_stream = (BaseSequentialStream *)&SDU1;
+BaseSequentialStream *shell_stream = (BaseSequentialStream *)&UART_CONN1;
 
 /*
  *  Heartbeat, Error LED thread
