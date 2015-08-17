@@ -103,7 +103,7 @@ int main(void)
     // radio
     // radio_start();
     // sensors
-    // onboard_sensors_start();
+    onboard_sensors_start();
     // stream_thread_start();
 
     // USB CDC serial device

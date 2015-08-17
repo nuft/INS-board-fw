@@ -1,4 +1,5 @@
 #include <ch.h>
+#include <hal.h>
 #include <chprintf.h>
 #include "board.h"
 #include "shell.h"
@@ -71,6 +72,21 @@ static void cmd_sensors(BaseSequentialStream *chp, int argc, char *argv[])
     }
 }
 
+static void cmd_bat(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    (void) argc;
+    (void) argv;
+
+    bool chg = false;
+    if (palReadPad(GPIOA, GPIOA_BAT_NTC)) {
+        chg = true;
+    }
+
+    chprintf(chp, "battery: %dmV %dmA %s\n", (int)(battery_voltage * 1000),
+        (int)(battery_current * 1000), chg ? "(charging)" : "");
+}
+
+
 static void cmd_dfu(BaseSequentialStream *chp, int argc, char *argv[])
 {
     (void)argc;
@@ -86,5 +102,6 @@ const ShellCommand shell_commands[] = {
     {"threads", cmd_threads},
     {"sensors", cmd_sensors},
     {"dfu", cmd_dfu},
+    {"bat", cmd_bat},
     {NULL, NULL}
 };
