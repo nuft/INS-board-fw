@@ -4,6 +4,8 @@
 #include "board.h"
 #include "shell.h"
 #include "onboardsensors.h"
+#include <motor.h>
+#include "rate_control.h"
 
 static void cmd_mem(BaseSequentialStream *chp, int argc, char *argv[])
 {
@@ -97,11 +99,23 @@ static void cmd_dfu(BaseSequentialStream *chp, int argc, char *argv[])
     reboot_and_run_bootloader();
 }
 
+static void cmd_pid_control(BaseSequentialStream *chp, int argc, char *argv[])
+{
+    (void)argc;
+    (void)argv;
+    motor_init();
+    chprintf(chp, "setting motors to 0.1 thrust, 0 rotation...\n");
+    controller.power = 0.3f;
+    controller.last_update = timestamp_get();
+    rate_control();
+}
+
 const ShellCommand shell_commands[] = {
     {"mem", cmd_mem},
     {"threads", cmd_threads},
     {"sensors", cmd_sensors},
     {"dfu", cmd_dfu},
     {"bat", cmd_bat},
+    {"pid", cmd_pid_control},
     {NULL, NULL}
 };

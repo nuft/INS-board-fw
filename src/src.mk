@@ -21,3 +21,7 @@ PROJSRC += src/stream.c
 PROJSRC += src/cmp_mem_access/cmp_mem_access.c
 PROJSRC += src/ina220.c
 PROJSRC += src/motor.c
+PROJSRC += src/crc16.c
+PROJSRC += src/rate_control.c
+PROJSRC += src/pid.c
+
