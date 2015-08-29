@@ -19,6 +19,7 @@ float battery_current;
 static THD_WORKING_AREA(imu_sensors_wa, 512);
 static THD_FUNCTION(imu_sensors, arg)
 {
+    chThdSleepMilliseconds(1000);
     chRegSetThreadName("imu sensors");
 
     I2CDriver *driver = (I2CDriver *)arg;
@@ -174,7 +175,7 @@ static THD_FUNCTION(power_monitor_thread, arg)
 
         if (voltage > 4.05 || current < 0.015) {
             charging_disable();
-        } else if (voltage < 3.6) {
+        } else {
             charging_enable();
         }
 

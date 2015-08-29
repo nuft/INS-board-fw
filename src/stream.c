@@ -164,12 +164,12 @@ static THD_FUNCTION(stream_thread, arg)
     while (1) {
         chThdSleepMilliseconds(5);
         stream_gyro();
-        chThdSleepMilliseconds(5);
-        stream_acc();
-        chThdSleepMilliseconds(5);
-        stream_baro();
-        chThdSleepMilliseconds(5);
-        stream_battery();
+        // chThdSleepMilliseconds(5);
+        // stream_acc();
+        // chThdSleepMilliseconds(5);
+        // stream_baro();
+        // chThdSleepMilliseconds(5);
+        // stream_battery();
     }
     return 0;
 }

@@ -76,9 +76,9 @@ void panic_handler(const char *reason)
 
 #ifdef DEBUG
     while (1) {
-        if (!palReadPad(GPIOB, GPIOB_PB_CTRL_KILL)) {
-            power_down();
-        }
+        // if (!palReadPad(GPIOB, GPIOB_PB_CTRL_KILL)) {
+        //     power_down();
+        // }
     }
 #else
     NVIC_SystemReset();
@@ -101,19 +101,19 @@ int main(void)
     exti_setup();
 
     // radio
-    // radio_start();
+    radio_start();
     // sensors
     onboard_sensors_start();
     // stream_thread_start();
 
-    // USB CDC serial device
-    sduObjectInit(&SDU1);
-    sduStart(&SDU1, &serusbcfg);
-    // USB start and connect
-    usbDisconnectBus(serusbcfg.usbp);
-    chThdSleepMilliseconds(1500);
-    usbStart(serusbcfg.usbp, &usbcfg);
-    usbConnectBus(serusbcfg.usbp);
+    // // USB CDC serial device
+    // sduObjectInit(&SDU1);
+    // sduStart(&SDU1, &serusbcfg);
+    // // USB start and connect
+    // usbDisconnectBus(serusbcfg.usbp);
+    // chThdSleepMilliseconds(1500);
+    // usbStart(serusbcfg.usbp, &usbcfg);
+    // usbConnectBus(serusbcfg.usbp);
 
     shellInit();
     static thread_t *shelltp = NULL;

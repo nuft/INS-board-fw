@@ -3,7 +3,7 @@ BOARDSRC = src/board.c
 BOARDINC = src/
 
 PROJSRC  = src/main.c
-PROJSRC += src/usbcfg.c
+#PROJSRC += src/usbcfg.c
 PROJSRC += src/exti.c
 PROJSRC += src/sensors/mpu60X0.c
 PROJSRC += src/sensors/ms5611.c
@@ -22,6 +22,7 @@ PROJSRC += src/cmp_mem_access/cmp_mem_access.c
 PROJSRC += src/ina220.c
 PROJSRC += src/motor.c
 PROJSRC += src/crc16.c
+PROJSRC += src/datagram_packer.c
 PROJSRC += src/rate_control.c
 PROJSRC += src/pid.c
 
