@@ -101,9 +101,9 @@ int main(void)
     exti_setup();
 
     // radio
-    radio_start();
+    radio_start_tx();
     // sensors
-    onboard_sensors_start();
+    // onboard_sensors_start();
     // stream_thread_start();
 
     // // USB CDC serial device
