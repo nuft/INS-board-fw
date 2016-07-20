@@ -1,6 +1,7 @@
 #include <hal.h>
 #include <ch.h>
 #include <chprintf.h>
+#include "servo_pwm.h"
 
 static const SerialConfig uart_config = {
     115200,
@@ -21,10 +22,13 @@ int main(void)
 
     chprintf(stdout, "boot\n");
 
+    servo_pwm_setup();
+
     while (1) {
-        chprintf(stdout, "hello world\n");
+        servo_pwm_set_pos(SERVO1, 0.5f);
         chThdSleepMilliseconds(500);
         palSetPad(GPIOC, GPIOC_LED_HEARTBEAT);
+        servo_pwm_set_pos(SERVO1, 1.0f);
         chThdSleepMilliseconds(500);
         palClearPad(GPIOC, GPIOC_LED_HEARTBEAT);
     }

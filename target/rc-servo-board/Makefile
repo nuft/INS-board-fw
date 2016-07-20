@@ -88,6 +88,7 @@ CSRC = $(STARTUPSRC) \
        $(HALSRC) \
        $(PLATFORMSRC) \
        $(CHIBIOS)/os/hal/lib/streams/chprintf.c \
+       servo_pwm.c \
        board.c \
        main.c
 
